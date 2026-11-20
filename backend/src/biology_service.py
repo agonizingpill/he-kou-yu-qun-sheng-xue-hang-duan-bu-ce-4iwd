@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 from .models import Net,NetCalibration,BioSample
 from .common import get,reject,finish,transect_lock
 from .school_service import latest
+from . import coverage_service as coverage
 
 def calibrate(db,data,user):
     net=get(db,Net,data.net_id,True);passed=abs(data.measured_mm-net.mesh_mm)<=net.mesh_mm*.1
@@ -14,5 +15,7 @@ def sample(db,data,user):
     reject(not cal.passed or current.id!=cal.id,'网具未通过最新校验，重新校验后再关联生物样')
     reject(cal.valid_until<c.arrive.astimezone(ZoneInfo('Asia/Shanghai')).date(),'网具校验有效期未覆盖航次日期')
     analysis=latest(db,t.id,True);reject(not analysis,'最新回波群落需主管复核后才能关联生物样')
-    reject(data.cluster_label not in {p['label'] for p in analysis.assignments if p['label']>=0},'未找到该鱼群聚类，不能把噪点作为生物样')
+    state=coverage.review_state(db,t)
+    reject(not state['valid'],'该航段最新结论已失效（'+state['reason']+'），重算覆盖并重签后再关联生物样')
+    reject(state['verdict']=='no_fish' or data.cluster_label not in {p['label'] for p in analysis.assignments if p['label']>=0},'未找到该鱼群聚类，不能把噪点或实测无鱼群作为生物样')
     row=BioSample(**data.model_dump(),analysis_id=analysis.id);db.add(row);db.flush();return finish(db,user,'记录网具生物抽样',row)

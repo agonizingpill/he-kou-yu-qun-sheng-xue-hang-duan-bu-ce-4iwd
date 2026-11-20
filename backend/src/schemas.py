@@ -1,4 +1,5 @@
 from datetime import datetime,date
+from typing import Literal
 from pydantic import BaseModel,Field,model_validator
 class Login(BaseModel):
     username:str
@@ -47,6 +48,7 @@ class AnalysisInput(BaseModel):
 class ReviewInput(BaseModel):
     noise_note:str=Field(min_length=1,max_length=240)
     decision:str=Field(min_length=4,max_length=120)
+    verdict:Literal['schools','no_fish']='schools'
 class CalibrationInput(BaseModel):
     net_id:int
     measured_mm:float=Field(gt=0,le=100)

@@ -3,13 +3,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
-from .database import Base,engine
+from .database import Base,engine,ensure_columns
 from .routes import router
 from .middlewares import RequestTrace,BurstLimit
 logging.basicConfig(level=logging.INFO)
 @asynccontextmanager
 async def lifespan(app):
     Base.metadata.create_all(engine)
+    ensure_columns()
     if os.getenv('SEED_DEMO','true')=='true':
         try:
             from .seed import seed

@@ -81,6 +81,8 @@ class SchoolReview(Base):
     analysis_id:Mapped[int]=mapped_column(ForeignKey('school_analyses.id'),unique=True)
     noise_note:Mapped[str]=mapped_column(String(240))
     decision:Mapped[str]=mapped_column(String(120))
+    verdict:Mapped[str]=mapped_column(String(20),default='schools')
+    coverage:Mapped[dict]=mapped_column(JSON,default=dict)
 class Net(Base):
     __tablename__='nets'
     id:Mapped[int]=mapped_column(primary_key=True)

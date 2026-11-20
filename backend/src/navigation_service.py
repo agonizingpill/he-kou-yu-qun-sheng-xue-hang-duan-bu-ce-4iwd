@@ -24,10 +24,12 @@ def launch(db,id,user):
     row.status='sailing';return finish(db,user,'核准开航',row)
 def return_port(db,id,user):
     from .common import cruise_lock
-    from .models import Echo,Resurvey,MissingInterval
+    from .models import Echo,Transect
+    from .coverage_service import cruise as cruise_coverage
     from sqlalchemy import func
     row=cruise_lock(db,id,True)
     transects=list(db.scalars(select(Transect).where(Transect.cruise_id==id,Transect.status!='cancelled')))
     reject(any(db.scalar(select(func.count()).select_from(Echo).where(Echo.transect_id==t.id))<8 for t in transects),'仍有航段未完成至少8个回波点')
-    reject(db.scalar(select(MissingInterval).join(Transect).where(Transect.cruise_id==id,MissingInterval.status=='open')) is not None,'缺测仍未补齐，先完成补航接续再结束调查')
+    pending=[(cv['code'],g) for cv in cruise_coverage(db,id) for g in cv['gaps'] if g['status'] in ('pending','planned','cancelled','invalid')]
+    reject(pending,'缺测仍未完成有效接续，先完成补航接续再结束调查：'+'、'.join(f"{code}缺测#{g['gap_id']}({g['reason']})" for code,g in pending))
     row.status='surveyed';return finish(db,user,'结束现场调查',row)
